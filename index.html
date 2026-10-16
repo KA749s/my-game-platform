@@ -1,0 +1,166 @@
+
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>我的遊戲世界</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: #101326;
+  color: #f4f5ff;
+  font-family: system-ui, sans-serif;
+}
+header {
+  padding: 28px 18px;
+  text-align: center;
+  background: linear-gradient(135deg,#392879,#126b82);
+}
+header h1 { margin: 0 0 8px; }
+header p { margin: 0; color: #d9e8ff; }
+main { max-width: 1000px; margin: auto; padding: 20px; }
+input, select {
+  width: 100%;
+  padding: 13px;
+  margin: 5px 0 14px;
+  border: 1px solid #454969;
+  border-radius: 10px;
+  background: #1c2038;
+  color: white;
+  font-size: 16px;
+}
+h2 { font-size: 20px; }
+.games {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(145px,1fr));
+  gap: 14px;
+}
+.card {
+  background: #1c2038;
+  border: 1px solid #343a5d;
+  border-radius: 15px;
+  padding: 16px;
+}
+.cover {
+  display: grid;
+  place-items: center;
+  min-height: 105px;
+  border-radius: 11px;
+  background: linear-gradient(135deg,#5538a8,#137f91);
+  font-size: 42px;
+}
+.card h3 { margin: 12px 0 6px; }
+.card p { color: #c0c7df; font-size: 14px; }
+a.play {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  color: white;
+  background: #6551e8;
+  padding: 10px;
+  border-radius: 9px;
+  font-weight: bold;
+}
+footer {
+  text-align: center;
+  padding: 25px;
+  color: #aeb6d2;
+  font-size: 13px;
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>🎮 我的遊戲世界</h1>
+  <p>找到喜歡的遊戲，現在就開始！</p>
+</header>
+
+<main>
+  <label for="search">搜尋遊戲</label>
+  <input id="search" placeholder="輸入遊戲名稱..." />
+
+  <label for="category">遊戲分類</label>
+  <select id="category">
+    <option value="all">全部遊戲</option>
+    <option value="puzzle">益智遊戲</option>
+    <option value="casual">休閒遊戲</option>
+  </select>
+
+  <h2>🕹️ 遊戲列表</h2>
+  <div class="games" id="games"></div>
+</main>
+
+<footer>我的遊戲世界 · 個人遊戲收藏</footer>
+
+<script>
+const gameList = [
+  {
+    name: "2048",
+    category: "puzzle",
+    icon: "🔢",
+    description: "數字合併益智遊戲",
+    url: "https://play2048.co/"
+  },
+  {
+    name: "Hextris",
+    category: "casual",
+    icon: "🔷",
+    description: "六角形節奏益智遊戲",
+    url: "https://hextris.io/"
+  }
+];
+
+const games = document.getElementById("games");
+const search = document.getElementById("search");
+const category = document.getElementById("category");
+
+function renderGames() {
+  const word = search.value.trim().toLowerCase();
+  const type = category.value;
+
+  const filtered = gameList.filter(game =>
+    game.name.toLowerCase().includes(word) &&
+    (type === "all" || game.category === type)
+  );
+
+  games.innerHTML = "";
+
+  if (filtered.length === 0) {
+    games.textContent = "找不到遊戲，試試其他名稱。";
+    return;
+  }
+
+  filtered.forEach(game => {
+    const card = document.createElement("article");
+    card.className = "card";
+
+    const cover = document.createElement("div");
+    cover.className = "cover";
+    cover.textContent = game.icon;
+
+    const title = document.createElement("h3");
+    title.textContent = game.name;
+
+    const description = document.createElement("p");
+    description.textContent = game.description;
+
+    const link = document.createElement("a");
+    link.className = "play";
+    link.href = game.url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = "開始遊戲 ↗";
+
+    card.append(cover, title, description, link);
+    games.appendChild(card);
+  });
+}
+
+search.addEventListener("input", renderGames);
+category.addEventListener("change", renderGames);
+renderGames();
+</script>
+</body>
+</html>
