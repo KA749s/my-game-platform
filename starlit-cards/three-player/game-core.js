@@ -92,7 +92,7 @@ function winCheck(game){
  }
  return false;
 }
-function advance(game){
+function advance(game,now=Date.now()){
  const prior=game.turn;
  for(let n=0;n<game.players.length;n++){
   const next=(game.turn+1)%game.players.length;
@@ -114,7 +114,7 @@ function advance(game){
   }else{
    setEffect(game,'turn',p.seat,[],'turn');
   }
-  game.turnDeadlineAt=Date.now()+TURN_MS;
+  game.turnDeadlineAt=now+TURN_MS;
   log(game,'轮到 '+p.name+' 出牌。');
   return;
  }
@@ -124,7 +124,7 @@ function expireTurn(game,now=Date.now()){
  if(!game||game.phase!=='playing'||now<game.turnDeadlineAt)return false;
  const p=game.players[game.turn];
  log(game,'⏱️ '+p.name+' 超时，自动结束回合。');
- game.sequence++;advance(game);
+ game.sequence++;advance(game,now);
  return true;
 }
 function applyAction(game,seat,action){
