@@ -1,7 +1,7 @@
 /* Offline 1-3 participant Android LAN game; native TCP host is authoritative. */
 (() => {
 'use strict';
-const Core=window.StarlitDuelCore,$=id=>document.getElementById(id),Native=window.LocalLan;
+const Core=window.StarlitDuelCore,Native=window.LocalLan;
 const KEY='starlit_lan_deck_v1';
 let mode=1,role='solo',seat=0,people=[],seats={},decks={},game=null,viewState=null,matchNo=0,lastNo=0,deck=Core.defaultDeck(),target=null,aiTimer=null;
 function $(id){return document.getElementById(id)}
