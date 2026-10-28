@@ -1,0 +1,70 @@
+
+/* Android LAN v1.2.0 -- viewport-fixed battle layout (no document scroll) */
+body.in-battle{height:100dvh;overflow:hidden}
+body.in-battle .site{height:100dvh;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+body.in-battle .site-header{min-height:40px;max-height:43px;padding:4px 12px;flex:none}
+body.in-battle .site-header .brand-icon{width:29px;height:29px;font-size:18px;border-radius:8px}
+body.in-battle .site-header .brand small{display:none}
+body.in-battle .site-header .brand strong{font-size:12px}
+body.in-battle main{min-height:0;flex:1;display:flex;flex-direction:column;padding:0}
+body.in-battle #battle{display:grid!important;grid-template-rows:auto auto auto minmax(0,1.1fr) minmax(0,1.2fr);height:100%;min-height:0;width:100%;max-width:none;gap:4px;padding:5px 9px 7px;margin:0;overflow:hidden}
+body.in-battle #battle>.battle-heading{grid-row:1;padding:0 2px;min-height:30px}
+body.in-battle #battle>.section-title{grid-row:2;font-size:clamp(14px,2.7vh,21px);margin:0;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.in-battle #battle>.section-sub{grid-row:3;font-size:10px;margin:0;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.in-battle .arena{grid-row:4;min-height:0;min-width:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:1fr;gap:5px;margin:0;overflow:hidden}
+body.in-battle .fighter{padding:clamp(5px,1vw,12px);border-radius:11px;min-height:0;display:flex;flex-direction:column;gap:2px;justify-content:space-evenly;position:relative;overflow:hidden;min-width:0}
+body.in-battle .fighter-top{min-height:0;font-size:clamp(10px,1.4vw,15px);line-height:1.2;font-weight:800;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.in-battle .hp-line{margin:0;font-size:clamp(10px,1.7vw,15px);white-space:nowrap}
+body.in-battle .health-track{height:6px;flex-shrink:0}
+body.in-battle .fighter-meta{font-size:clamp(9px,1.2vw,12px);margin:0;line-height:1.2}
+body.in-battle .fighter .btn{padding:3px 5px;min-height:27px;font-size:clamp(9px,1.4vw,12px);margin:0}
+body.in-battle .hand-section{grid-row:5;min-height:0;display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;gap:3px;padding:6px 9px;margin:0;overflow:hidden;border-radius:13px}
+body.in-battle .hand-header h2{font-size:14px;margin:0}
+body.in-battle .hand-header small{display:none}
+body.in-battle .mana-chip{padding:3px 7px;font-size:11px}
+body.in-battle .hand-prompt{font-size:9px;line-height:1.2;margin:0;white-space:nowrap;overflow:hidden}
+body.in-battle .hand-cards{min-height:0;display:flex;align-items:stretch;gap:4px;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;scroll-snap-type:x proximity;padding:2px}
+body.in-battle .playing-card{flex:0 0 clamp(72px,14vw,122px);min-width:0;min-height:0;height:100%;padding:5px 4px;gap:2px;border-radius:8px;scroll-snap-align:start;justify-content:space-between}
+body.in-battle .playing-card .card-cost{font-size:9px;padding:1px 3px}
+body.in-battle .card-symbol{font-size:clamp(20px,4vh,40px);margin:0}
+body.in-battle .card-name{font-size:clamp(10px,1.4vw,13px);line-height:1.15}
+body.in-battle .card-description{font-size:clamp(8px,1.0vw,11px);line-height:1.2}
+body.in-battle .battle-actions{margin:0;gap:5px}
+body.in-battle .battle-actions .btn{min-width:0;min-height:30px;padding:3px 15px;font-size:12px}
+body.in-battle .history{display:none}
+body.in-battle footer{display:none}
+body.in-battle .in-room-controls{display:none!important}
+body.in-battle #global-status{position:absolute;z-index:100;top:42px;left:10px;right:10px;max-width:none;width:auto;margin:0;box-shadow:0 7px 28px #000a}
+.lan-controls{display:flex;align-items:center;gap:6px}
+.lan-controls button{border:1px solid #988abf8c;border-radius:8px;background:#2a345b;color:#fff;padding:4px 7px;font-size:11px;min-height:29px}
+.turn-clock{padding:2px 8px;min-width:44px;display:grid;place-items:center;border-radius:9px;background:#263a59;border:1px solid #aeb7ea80;color:#f5d69c;font-weight:900;font-variant-numeric:tabular-nums;font-size:14px}
+.turn-clock.urgent{color:#fff;border-color:#ff7878;background:#8e3545;animation:lan-pulse .5s infinite alternate}
+@keyframes lan-pulse{to{opacity:.54}}
+.lan-hit{animation:lan-impact .45s ease}
+.lan-heal{animation:lan-healing .55s ease}
+.lan-block{animation:lan-blocked .55s ease}
+@keyframes lan-impact{0%{transform:translateX(0);filter:none}15%{transform:translateX(-6px);filter:brightness(2)}35%{transform:translateX(5px);filter:brightness(1.1)}60%{transform:translateX(-3px)}100%{transform:translateX(0)}}
+@keyframes lan-healing{30%{box-shadow:0 0 28px #60ffc9,inset 0 0 16px #60ffc962}}
+@keyframes lan-blocked{30%{box-shadow:0 0 30px #a7dbff,inset 0 0 18px #a7dbff73}}
+.damage-pop{position:absolute;top:8%;left:50%;transform:translate(-50%,0);z-index:4;color:#ff9999;text-shadow:0 2px 7px #000;font-size:clamp(16px,3vw,26px);font-weight:900;animation:lan-float .8s ease-out forwards;pointer-events:none}
+@keyframes lan-float{to{transform:translate(-50%,-35px);opacity:0}}
+@media(max-width:690px){
+ body.in-battle .arena{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+ body.in-battle .fighter{padding:4px}
+ body.in-battle .fighter-top{font-size:10px}
+ body.in-battle .fighter-meta{font-size:8px}
+ body.in-battle .fighter .btn{min-height:25px;font-size:9px;padding:1px}
+ body.in-battle .playing-card{flex-basis:clamp(66px,23vw,93px)}
+ body.in-battle #battle{grid-template-rows:auto auto auto minmax(0,.85fr) minmax(0,1.6fr)}
+}
+@media(min-width:740px) and (min-height:620px){
+ body.in-battle #battle{grid-template-rows:auto auto auto minmax(0,1fr) minmax(0,1.1fr)}
+ body.in-battle .playing-card{flex-basis:clamp(102px,11vw,155px)}
+}
+@media(max-height:550px){
+ body.in-battle #battle{grid-template-rows:auto auto minmax(0,1fr) minmax(0,1.45fr)}
+ body.in-battle #battle>.section-sub{display:none}
+ body.in-battle .site-header{min-height:35px;max-height:36px}
+ body.in-battle .fighter-meta{display:none}
+ body.in-battle .playing-card{flex-basis:clamp(62px,12vw,97px)}
+}
