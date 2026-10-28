@@ -143,7 +143,45 @@ test('can finish by attack, and cannot target eliminated seats', () => {
   assert.equal(core.applyAction(g,0,{kind:'end'}).ok,false);
 });
 
-test('must have exactly three players', () => {
-  assert.throws(()=>core.createMatch(['A','B'],()=>.1));
+test('only 2 or 3 total participants, custom decks validated', () => {
+  const d=core.defaultDeck();
+  assert.equal(d.length,22);
+  assert.equal(core.validateDeck(d).valid,true);
+  assert.equal(core.createMatch(['A','B'],()=>.1).players.length,2);
+  assert.equal(core.createMatch(['A','B','C'],()=>.1).players.length,3);
+  assert.throws(()=>core.createMatch(['A'],()=>.1));
   assert.throws(()=>core.createMatch([],()=>.1));
+  assert.throws(()=>core.createMatch(['A','B','C','D'],()=>.1));
+  assert.equal(core.validateDeck(Array(22).fill('slash')).valid,false);
+  assert.equal(core.validateDeck(Array(22).fill('heal')).valid,false);
+  assert.equal(core.validateDeck([...d.slice(1),'unknown']).valid,false);
+  assert.equal(core.validateDeck(d.slice(1)).valid,false);
+  const a=[...d];a[0]='meteor';
+  const game=core.createMatch(['A','B'],()=>.4,[a,d]);
+  assert.equal(game.players[0].deck.length+game.players[0].hand.length,22);
+  assert.throws(()=>core.createMatch(['A','B'],()=>.4,[d,[]]));
+});
+
+test('two-person turns, elimination and win condition', () => {
+  const game=core.createMatch(['玩家','好友'],()=>.5);
+  assert.equal(core.applyAction(game,0,{kind:'end'}).ok,true);
+  assert.equal(game.turn,1);
+  assert.equal(core.applyAction(game,1,{kind:'end'}).ok,true);
+  assert.equal(game.turn,0);
+  assert.equal(core.forfeit(game,1),true);
+  assert.equal(game.phase,'finished');
+  assert.equal(game.winner,0);
+});
+
+test('AI chooses legal playable actions and ends when out of energy', () => {
+  const game=core.createMatch(['玩家','机器人'],()=>.5);
+  assert.equal(core.applyAction(game,0,{kind:'end'}).ok,true);
+  let steps=0;
+  while(game.phase==='playing'&&game.turn===1&&steps++<25) {
+    const action=core.chooseAiAction(game,1);
+    const out=core.applyAction(game,1,action);
+    assert.equal(out.ok,true,JSON.stringify(action));
+  }
+  assert.ok(steps<25,'AI does not loop indefinitely');
+  assert.ok(game.phase==='finished'||game.turn===0);
 });
