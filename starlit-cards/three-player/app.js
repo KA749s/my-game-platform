@@ -6,7 +6,9 @@
   const $ = (id) => document.getElementById(id);
   const PEER_PREFIX = 'starlit-three-';
   const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  const VERSION = 1;
+  const VERSION = 2;
+  const DECK_KEY='starlit_custom_deck_v1';
+  let gameMode=3, expectedPlayers=3, localDeck=Core.defaultDeck(), seatDecks=[null,null,null], aiTimer=null;
 
   let role = null; // "host" / "guest"
   let peer = null;
@@ -23,6 +25,26 @@
   const guests = new Map(); // seat => DataConnection, host only
   let connectTimer = null;
   let starting = false;
+  function loadDeck(){try{const x=JSON.parse(localStorage.getItem(DECK_KEY));return Core.validateDeck(x).valid?x:Core.defaultDeck()}catch(_){return Core.defaultDeck()}}
+  function saveDeck(){try{localStorage.setItem(DECK_KEY,JSON.stringify(localDeck))}catch(_){}}
+  function renderDeck(){
+    const root=$('deck-cards');root.replaceChildren();
+    const counts={};for(const id of localDeck)counts[id]=(counts[id]||0)+1;
+    for(const [id,card] of Object.entries(Core.CARDS)){
+      const row=element('div','deck-row'),controls=element('div','deck-actions');
+      row.append(element('span','',card.icon+' '+card.name+' · '+card.desc));
+      controls.append(button('−','btn btn-outline',()=>{const i=localDeck.indexOf(id);if(i>=0){localDeck.splice(i,1);saveDeck();renderDeck()}},!counts[id]));
+      controls.append(element('strong','',counts[id]||0));
+      controls.append(button('+','btn btn-outline',()=>{if(localDeck.length<Core.DECK_SIZE&&(counts[id]||0)<Core.MAX_COPIES){localDeck.push(id);saveDeck();renderDeck()}},localDeck.length>=Core.DECK_SIZE||(counts[id]||0)>=Core.MAX_COPIES));
+      row.append(controls);root.append(row);
+    }
+    const check=Core.validateDeck(localDeck);
+    $('deck-summary').textContent=localDeck.length+'/'+Core.DECK_SIZE+' 张 · '+(check.valid?'卡组有效':check.reason);
+    $('deck-summary').classList.toggle('error',!check.valid);
+  }
+  function ensureDeck(){const c=Core.validateDeck(localDeck);if(c.valid)return true;status(c.reason,true);$('deck-editor').hidden=false;renderDeck();return false}
+  function setMode(m){gameMode=m;document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('selected',Number(b.dataset.mode)===m));$('mode-description').textContent=m===1?'单人挑战智能对手，不需要创建房间':m===2?'邀请一位好友进行双人对决':'邀请两位好友进行三人混战';}
+
   let matchNumber = 0;
   let lastMatchNumber = 0;
 
@@ -103,6 +125,7 @@
     selectedTarget = null;
     lastSequence = 0;
     starting = false;
+    if(aiTimer)clearTimeout(aiTimer);aiTimer=null;seatDecks=[null,null,null];
     matchNumber = 0;
     lastMatchNumber = 0;
     people = [null, null, null];
@@ -146,13 +169,21 @@
     return sanitizeName($('nickname').value);
   }
   function startHosting() {
+    if(!ensureDeck())return;
     closeStatus();
+    expectedPlayers=gameMode;
+    if(gameMode===1){
+      tearDown();role='host';mySeat=0;myName=acceptName();roomCode='SOLO';expectedPlayers=2;
+      people=[{name:myName,connected:true},{name:'星火AI',connected:true}];
+      seatDecks=[localDeck.slice(),Core.defaultDeck()];beginMatch();return;
+    }
     if (peer) tearDown();
     role = 'host';
     mySeat = 0;
     myName = acceptName();
     roomCode = secureRoomCode();
     people[0] = { name: myName, connected: true };
+    seatDecks[0]=localDeck.slice();
     markBusy(true);
     peer = newPeer(roomPeerId(roomCode));
     if (!peer) { markBusy(false); tearDown(); return; }
@@ -173,6 +204,7 @@
     });
   }
   function startJoining() {
+    if(!ensureDeck())return;
     closeStatus();
     const code = escapeRoom($('join-code').value);
     $('join-code').value = code;
@@ -190,7 +222,7 @@
     peer.on('open', () => {
       hostConnection = peer.connect(roomPeerId(roomCode), {
         reliable: true, serialization: 'json',
-        metadata: { version: VERSION, name: myName }
+        metadata: { version: VERSION, name: myName, deck: localDeck.slice() }
       });
       const c = hostConnection;
       c.on('open', () => {
@@ -234,13 +266,16 @@
         setTimeout(() => conn.close(), 250);
         return;
       }
-      const vacant = [1, 2].find(i => !people[i]);
+      const vacant = Array.from({length:expectedPlayers-1},(_,i)=>i+1).find(i => !people[i]);
       if (vacant === undefined) {
         send(conn, { type: 'rejected', message: '三人房间已满。' });
         setTimeout(() => conn.close(), 250);
         return;
       }
+      const deck=conn.metadata?.deck,checked=Core.validateDeck(deck);
+      if(!checked.valid){send(conn,{type:'rejected',message:'卡组无效：'+checked.reason});setTimeout(()=>conn.close(),250);return;}
       assignedSeat = vacant;
+      seatDecks[vacant]=deck.slice();
       const name = sanitizeName(conn.metadata?.name);
       people[vacant] = { name, connected: true };
       guests.set(vacant, conn);
@@ -264,6 +299,7 @@
         status(people[assignedSeat].name + ' 已断开，按退赛处理。', true);
       } else {
         people[assignedSeat] = null;
+        seatDecks[assignedSeat]=null;
         broadcastLobby();
       }
     });
@@ -275,7 +311,7 @@
   }
   function lobbyPayload() {
     return {
-      type: 'lobby', code: roomCode,
+      type: 'lobby', code: roomCode, size:expectedPlayers,
       players: people.map((p, i) => p ? { seat: i, name: p.name, connected: p.connected } : null)
     };
   }
@@ -302,8 +338,9 @@
       return;
     }
     if (mySeat < 0) return;
-    if (data.type === 'lobby' && Array.isArray(data.players) && data.players.length === 3) {
+    if (data.type === 'lobby' && Array.isArray(data.players) && (data.players.length===2||data.players.length===3)) {
       people = data.players;
+      expectedPlayers=data.size===2?2:3;
       renderLobby();
     }
     if (data.type === 'state') {
@@ -329,10 +366,10 @@
   function renderLobby() {
     $('lobby-code').textContent = roomCode || '——';
     $('room-share').textContent = location.origin + location.pathname + '?room=' + encodeURIComponent(roomCode);
-    $('lobby-count').textContent = lobbyCount() + ' / 3 位玩家';
+    $('lobby-count').textContent = lobbyCount() + ' / '+expectedPlayers+' 位玩家';
     const list = $('lobby-players');
     list.replaceChildren();
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < expectedPlayers; i++) {
       const p = people[i];
       const item = element('div', 'lobby-seat' + (p ? ' ready' : ' waiting'));
       item.append(element('span', 'seat-number', '0' + (i + 1)));
@@ -344,22 +381,22 @@
       list.append(item);
     }
     $('start-match').hidden = role !== 'host';
-    $('start-match').disabled = role !== 'host' || lobbyCount() !== 3 || starting;
+    $('start-match').disabled = role !== 'host' || lobbyCount() !== expectedPlayers || starting;
     $('wait-for-host').hidden = role === 'host';
-    $('lobby-hint').textContent = lobbyCount() < 3
-      ? '还差 ' + (3 - lobbyCount()) + ' 位玩家，凑齐三人才能开战。'
-      : role === 'host' ? '三人已就位，可以开始对战！' : '三人已就位，等待房主点击开始。';
+    $('lobby-hint').textContent = lobbyCount() < expectedPlayers
+      ? '还差 ' + (expectedPlayers-lobbyCount()) + ' 位玩家。'
+      : role === 'host' ? '全员已就位，可以开始对战！' : '所有玩家已就位，等待房主点击开始。';
   }
   function beginMatch() {
-    if (role !== 'host' || lobbyCount() !== 3 || match) return;
+    if (role !== 'host' || lobbyCount() !== expectedPlayers || match) return;
     starting = true;
     $('start-match').disabled = true;
     matchNumber++;
-    match = Core.createMatch(people.map(p => p.name), () => {
+    match = Core.createMatch(people.slice(0,expectedPlayers).map(p => p.name), () => {
       const u = new Uint32Array(1);
       crypto.getRandomValues(u);
       return u[0] / 4294967296;
-    });
+    },seatDecks.slice(0,expectedPlayers));
     view('battle');
     broadcastMatch();
   }
@@ -371,7 +408,9 @@
     for (const [seat, conn] of guests.entries()) {
       send(conn, { ...Core.snapshot(match, seat), matchNo: matchNumber });
     }
+    scheduleAI();
   }
+  function scheduleAI(){if(aiTimer)clearTimeout(aiTimer);aiTimer=null;if(gameMode!==1||role!=='host'||!match||match.phase!=='playing'||match.turn!==1)return;aiTimer=setTimeout(()=>{if(match&&match.phase==='playing'&&match.turn===1)applyAction(1,Core.chooseAiAction(match,1));},700)}
   function applyAction(seat, action, conn) {
     if (role !== 'host' || !match) return;
     const outcome = Core.applyAction(match, seat, action);
@@ -472,14 +511,14 @@
     state.log.slice(-8).reverse().forEach(line => log.append(element('li', '', line)));
 
     $('rematch').hidden = role !== 'host' || state.phase !== 'finished';
-    $('rematch').disabled = role !== 'host' || state.phase !== 'finished' || guests.size !== 2;
-    $('rematch-hint').hidden = state.phase !== 'finished' || role === 'host' && guests.size === 2;
+    $('rematch').disabled = role !== 'host' || state.phase !== 'finished' || (gameMode!==1 && guests.size !== expectedPlayers-1);
+    $('rematch-hint').hidden = state.phase !== 'finished' || role === 'host' && (gameMode===1 || guests.size===expectedPlayers-1);
   }
   function rematch() {
-    if (role !== 'host' || !match || match.phase !== 'finished' || guests.size !== 2) return;
-    match = Core.createMatch(people.map(p => p.name), () => {
+    if (role !== 'host' || !match || match.phase !== 'finished' || (gameMode!==1 && guests.size !== expectedPlayers-1)) return;
+    match = Core.createMatch(people.slice(0,expectedPlayers).map(p => p.name), () => {
       const u = new Uint32Array(1); crypto.getRandomValues(u); return u[0] / 4294967296;
-    });
+    },seatDecks.slice(0,expectedPlayers));
     selectedTarget = null;
     lastSequence = 0;
     closeStatus();
@@ -499,6 +538,11 @@
     }
   }
   function startup() {
+    localDeck=loadDeck();
+    document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>setMode(Number(b.dataset.mode))));
+    setMode(3);
+    $('deck-toggle').addEventListener('click',()=>{$('deck-editor').hidden=!$('deck-editor').hidden;renderDeck()});
+    $('deck-reset').addEventListener('click',()=>{localDeck=Core.defaultDeck();saveDeck();renderDeck()});
     $('create-room').addEventListener('click', startHosting);
     $('join-room').addEventListener('click', startJoining);
     $('join-code').addEventListener('input', e => { e.target.value = escapeRoom(e.target.value); });
