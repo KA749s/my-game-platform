@@ -12,11 +12,12 @@ for name in ("game-core.js", "style.css"):
 html = (website / "index.html").read_text(encoding="utf-8")
 html = re.sub(r'\s*<script src="https://cdn\.jsdelivr\.net/npm/peerjs[^"]+" defer></script>', "", html)
 assert 'cdn.jsdelivr.net/npm/peerjs' not in html
-html = html.replace('./app.js?v=1100', './app-lan.js')
-html = html.replace('game-core.js?v=1100', 'game-core.js')
-html = html.replace('style.css?v=1100', 'style.css')
+html = re.sub(r'./app\\.js\\?v=\\d+', './app-lan.js', html)
+html = re.sub(r'game-core\\.js\\?v=\\d+', 'game-core.js', html)
+html = re.sub(r'style\\.css\\?v=\\d+', 'style.css', html)
+html = html.replace('<div class="battle-heading"><span class="eyebrow">⚔ 星火卡牌对决</span>', '<div class="battle-heading"><span class="eyebrow">⚔ 星火卡牌对决</span><div class="lan-controls"><span id="turn-clock" class="turn-clock">45s</span><button id="sound-toggle" type="button">🔊</button><button id="battle-exit" type="button">✕ 退出</button></div>')
 html = html.replace('三人联机 · 无需登录', '局域网对战 · 免登录')
-html = html.replace('1～3 人自定义卡组版 v1.1.0', '1～3 人局域网测试版 v1.1.0')
+html = html.replace('1～3 人自定义卡组版 v1.1.0', '局域网优化版 v1.2.0')
 html = html.replace('单人挑战 AI，双人好友切磋，三人自由混战。自己组 22 张牌，无需账号、无需安装。',
                     '单人挑战 AI、双人单挑、三人混战。自己组 22 张牌；联机时三部手机连接同一个 Wi-Fi。')
 html = html.replace('无需账号、无需安装', '无需账号')
