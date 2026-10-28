@@ -185,3 +185,32 @@ test('AI chooses legal playable actions and ends when out of energy', () => {
   assert.ok(steps<25,'AI does not loop indefinitely');
   assert.ok(game.phase==='finished'||game.turn===0);
 });
+
+test('18 card types, custom deck additions and cost semantics',()=>{
+ assert.ok(Object.keys(core.CARDS).length>=18);
+ const d=[...core.defaultDeck()];
+ d[0]='nova';d[1]='frost';d[2]='burn';
+ assert.equal(core.validateDeck(d).valid,true);
+ const game=core.createMatch(['A','B'],()=>.4,[d,core.defaultDeck()]);
+ assert.equal(game.players.length,2);
+});
+test('turn timer expires through host-authoritative check',()=>{
+ const game=create();
+ const before=game.turn;
+ const expiry=game.turnDeadlineAt;
+ assert.equal(core.expireTurn(game,expiry-1),false);
+ assert.equal(core.expireTurn(game,expiry),true);
+ assert.notEqual(game.turn,before);
+ assert.equal(core.expireTurn(game,expiry),false);
+});
+test('new targeting and area attacks apply correctly',()=>{
+ const game=create();
+ let p=game.players[0];
+ const c=p.deck.find(c=>c.id==='sweep');
+ if(!c) {p.deck.push({uid:99988,id:'sweep'});}
+ const idx=p.deck.findIndex(c=>c.id==='sweep');p.hand.push(...p.deck.splice(idx,1));p.mana=3;
+ const uid=p.hand.find(c=>c.id==='sweep').uid;
+ assert.equal(core.applyAction(game,0,{kind:'play',uid}).ok,true);
+ assert.equal(game.players[1].hp,31);
+ assert.equal(game.players[2].hp,31);
+});
