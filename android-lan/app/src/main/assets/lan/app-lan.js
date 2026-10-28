@@ -3,12 +3,19 @@
 'use strict';
 const Core=window.StarlitDuelCore,Native=window.LocalLan;
 const KEY='starlit_lan_deck_v1';
-let mode=1,role='solo',seat=0,people=[],seats={},decks={},game=null,viewState=null,matchNo=0,lastNo=0,deck=Core.defaultDeck(),target=null,aiTimer=null;
+let clockTimer=null,deadline=0,lastFx=0,soundOn=true,audioCtx=null,mode=1,role='solo',seat=0,people=[],seats={},decks={},game=null,viewState=null,matchNo=0,lastNo=0,deck=Core.defaultDeck(),target=null,aiTimer=null;
 function $(id){return document.getElementById(id)}
 function msg(text){$('global-status').hidden=false;$('status-placeholder').textContent=String(text)}
 function clearMsg(){$('global-status').hidden=true}
 function safeName(t){return String(t||'星火旅人').replace(/[<>]/g,'').trim().slice(0,12)||'星火旅人'}
-function show(name){for(const id of ['landing','lobby','battle'])$(id).hidden=id!==name;$('in-room-controls').hidden=name==='landing';window.scrollTo(0,0)}
+function show(name){for(const id of ['landing','lobby','battle'])$(id).hidden=id!==name;$('in-room-controls').hidden=name==='landing';document.body.classList.toggle('in-battle',name==='battle');window.scrollTo(0,0)}
+function tone(freq,duration=0.1,type='sine',volume=.08){if(!soundOn)return;try{audioCtx=audioCtx||new(window.AudioContext||window.webkitAudioContext)();const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();osc.type=type;osc.frequency.setValueAtTime(freq,audioCtx.currentTime);gain.gain.setValueAtTime(volume,audioCtx.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+duration);osc.connect(gain);gain.connect(audioCtx.destination);osc.start();osc.stop(audioCtx.currentTime+duration)}catch(_){}}
+function playFx(fx){if(!fx||fx.id===lastFx)return;lastFx=fx.id;const d=fx.results||[];const bad=d.some(x=>x.delta<0);tone(bad?125:fx.kind==='heal'?650:480,bad?.18:.13,bad?'sawtooth':'sine');if(bad)setTimeout(()=>tone(75,.1,'triangle',.045),65);for(const change of d){const card=document.querySelector('[data-seat="'+change.seat+'"]');if(card){card.classList.remove('lan-hit','lan-heal','lan-block');void card.offsetWidth;card.classList.add(change.delta<0?'lan-hit':change.delta>0?'lan-heal':'lan-block');const popup=el('span','damage-pop',change.delta?String(change.delta):change.shield?'🛡 +'+change.shield:'✦');card.append(popup);setTimeout(()=>{popup.remove();card.classList.remove('lan-hit','lan-heal','lan-block')},850)}}}
+function clock(){if(!deadline)return;const seconds=Math.max(0,Math.ceil((deadline-Date.now())/1000));$('turn-clock').textContent=seconds+'s';$('turn-clock').classList.toggle('urgent',seconds<=10);if(seconds===0&&(role==='host'||role==='solo')&&game?.phase==='playing'){if(Core.expireTurn(game)){broadcast()}}}
+function setClock(ms){deadline=Date.now()+Math.max(0,ms||0);clock()}
+function stopClock(){if(clockTimer)clearInterval(clockTimer);clockTimer=null;deadline=0}
+function startClock(){if(!clockTimer)clockTimer=setInterval(clock,220)}
+
 function el(tag,cls,txt){const n=document.createElement(tag);n.className=cls||'';if(txt!=null)n.textContent=String(txt);return n}
 function btn(text,onclick,disabled=false){const b=el('button','btn btn-outline',text);b.type='button';b.disabled=disabled;b.onclick=onclick;return b}
 function parseDeck(){try{const d=JSON.parse(localStorage.getItem(KEY));return Core.validateDeck(d).valid?d:Core.defaultDeck()}catch(_){return Core.defaultDeck()}}
@@ -78,6 +85,7 @@ function begin(){
 }
 function broadcast(){
  if(!game||!(role==='host'||role==='solo'))return;
+ if(game.phase==='playing'&&Core.expireTurn(game)){/* overdue turn advanced by host */}
  for(let i=0;i<game.players.length;i++){
   const d={...Core.snapshot(game,i),matchNo};
   if(i===0){viewState=d;renderBattle(d);}
@@ -93,6 +101,7 @@ function broadcast(){
 function action(who,a){
  if(!game)return;
  const result=Core.applyAction(game,who,a);
+ if(result.timedOut){broadcast();return;}
  if(!result.ok){if(who===0)msg(result.reason);else send(who,{type:'notice',text:result.reason});return}
  clearMsg();broadcast();
 }
@@ -104,6 +113,7 @@ function take(a){
 function renderBattle(s){
  show('battle');
  $('battle-round').textContent='第 '+s.round+' 轮';
+ setClock(s.remainingMs);startClock();
  const playing=s.phase==='playing'&&s.turn===seat;
  $('turn-heading').textContent=s.phase==='finished'?(s.winner===seat?'🏆 你赢了！':'获胜者：'+(s.players[s.winner]?.name||'平局')):(playing?'✨ 轮到你出牌':(s.players[seat]?.alive?'等待 '+s.players[s.turn].name+' 出牌':'你已出局，继续观战'));
  $('turn-subtitle').textContent=playing?'先选攻击目标，再点手牌':'房主负责判定战况，实时同步';
@@ -111,6 +121,7 @@ function renderBattle(s){
  const arena=$('player-arena');arena.replaceChildren();
  s.players.forEach(p=>{
   const card=el('article','fighter'+(p.seat===seat?' own':'')+(p.seat===target?' chosen':'')+(!p.alive?' eliminated':''));
+  card.dataset.seat=p.seat;
   card.append(el('div','fighter-top',p.name+(p.seat===seat?'（你）':'')));
   card.append(el('div','hp-line','❤ '+p.hp+'/36 · 🛡 '+p.shield));
   const bar=el('div','health-track'),fill=el('div','health-fill');fill.style.width=(p.hp/36*100)+'%';bar.append(fill);card.append(bar);
@@ -135,6 +146,7 @@ function renderBattle(s){
  $('rematch').hidden=role==='guest'||s.phase!=='finished';
  $('rematch').disabled=role==='host'&&people.filter(Boolean).length!==mode;
  $('rematch-hint').hidden=s.phase!=='finished';
+ playFx(s.lastEffect);
 }
 window.onNativeLan=function(json){
  let ev;try{ev=JSON.parse(json)}catch(_){return}
@@ -181,10 +193,11 @@ window.onNativeLan=function(json){
  }
 };
 function exit(){
- if(aiTimer)clearTimeout(aiTimer);Native.close();
+ if(aiTimer)clearTimeout(aiTimer);stopClock();Native.close();
  game=null;viewState=null;people=[];role='solo';seat=0;target=null;show('landing');clearMsg();
 }
-window.confirmExitLan=()=>{if(confirm('退出当前对局？'))exit()};
+window.confirmExitLan=()=>{if(!confirm('确定离开当前房间并返回主菜单？'))return;exit()};
+window.forceExitLan=()=>exit();
 function init(){
  deck=parseDeck();
  document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>showMode(Number(b.dataset.mode)));
@@ -194,7 +207,9 @@ function init(){
  $('create-room').onclick=host;$('join-room').onclick=join;
  $('start-match').onclick=begin;
  $('end-turn').onclick=()=>take({kind:'end'});
- $('leave-room').onclick=()=>{if(confirm('离开本局？'))exit()};
+ $('leave-room').onclick=window.confirmExitLan;
+ $('battle-exit').onclick=window.confirmExitLan;
+ $('sound-toggle').onclick=()=>{soundOn=!soundOn;$('sound-toggle').textContent=soundOn?'🔊':'🔇';if(soundOn)tone(600)};
  $('rematch').onclick=()=>{game=null;begin()};
  $('dismiss-status').onclick=clearMsg;
  $('copy-invite').onclick=()=>{const ip=Native.address();if(navigator.clipboard?.writeText)navigator.clipboard.writeText(ip).then(()=>msg('已复制房主 IP'));else msg('房主 IP：'+ip)};
