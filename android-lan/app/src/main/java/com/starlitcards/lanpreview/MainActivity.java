@@ -30,8 +30,14 @@ public final class MainActivity extends Activity {
         web.loadUrl("file:///android_asset/lan/index.html");
     }
     @Override public void onBackPressed() {
-        if(web!=null)web.evaluateJavascript("window.confirmExitLan&&window.confirmExitLan()",null);
-        else super.onBackPressed();
+        new android.app.AlertDialog.Builder(this)
+          .setTitle("离开当前对局？")
+          .setMessage("返回主菜单会退出当前房间。")
+          .setNegativeButton("取消",null)
+          .setPositiveButton("离开",(dialog,which)->{
+              if(lan!=null)lan.close();
+              if(web!=null)web.evaluateJavascript("window.forceExitLan&&window.forceExitLan()",null);
+          }).show();
     }
     @Override protected void onDestroy(){
         if(lan!=null)lan.close();
