@@ -23,6 +23,8 @@
   const guests = new Map(); // seat => DataConnection, host only
   let connectTimer = null;
   let starting = false;
+  let matchNumber = 0;
+  let lastMatchNumber = 0;
 
   function escapeRoom(raw) {
     return String(raw || '').trim().replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 6);
@@ -44,7 +46,7 @@
   }
   function status(message, isError = false) {
     const area = $('global-status');
-    area.textContent = message;
+    $('status-placeholder').textContent = message;
     area.classList.toggle('error', !!isError);
     area.hidden = false;
   }
@@ -101,6 +103,8 @@
     selectedTarget = null;
     lastSequence = 0;
     starting = false;
+    matchNumber = 0;
+    lastMatchNumber = 0;
     people = [null, null, null];
   }
   function leave(message) {
@@ -303,7 +307,13 @@
       renderLobby();
     }
     if (data.type === 'state') {
-      if (data.you !== mySeat || !Number.isInteger(data.seq) || data.seq <= lastSequence) return;
+      if (data.you !== mySeat || !Number.isInteger(data.seq) || !Number.isInteger(data.matchNo)) return;
+      if (data.matchNo < lastMatchNumber) return;
+      if (data.matchNo > lastMatchNumber) {
+        lastMatchNumber = data.matchNo;
+        lastSequence = 0;
+      }
+      if (data.seq <= lastSequence) return;
       lastSequence = data.seq;
       publicState = data;
       view('battle');
@@ -344,6 +354,7 @@
     if (role !== 'host' || lobbyCount() !== 3 || match) return;
     starting = true;
     $('start-match').disabled = true;
+    matchNumber++;
     match = Core.createMatch(people.map(p => p.name), () => {
       const u = new Uint32Array(1);
       crypto.getRandomValues(u);
@@ -354,11 +365,11 @@
   }
   function broadcastMatch() {
     if (!match || role !== 'host') return;
-    const local = Core.snapshot(match, 0);
+    const local = { ...Core.snapshot(match, 0), matchNo: matchNumber };
     publicState = local;
     renderBattle(local);
     for (const [seat, conn] of guests.entries()) {
-      send(conn, Core.snapshot(match, seat));
+      send(conn, { ...Core.snapshot(match, seat), matchNo: matchNumber });
     }
   }
   function applyAction(seat, action, conn) {
