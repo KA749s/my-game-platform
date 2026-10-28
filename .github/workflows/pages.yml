@@ -1,4 +1,4 @@
-name: Publish public website and Starlit Cards privacy draft
+name: Test and publish Starlit Cards browser game
 on:
   push:
     branches: [main]
@@ -11,7 +11,27 @@ concurrency:
   group: github-pages
   cancel-in-progress: true
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check JavaScript syntax
+        run: |
+          node --check starlit-cards/three-player/game-core.js
+          node --check starlit-cards/three-player/app.js
+      - name: Run deterministic card duel unit tests
+        run: node --test tests/three-player-core.test.cjs
+      - name: Check static-site files
+        run: |
+          test -s starlit-cards/three-player/index.html
+          test -s starlit-cards/three-player/style.css
+          grep -q 'id="player-arena"' starlit-cards/three-player/index.html
+          grep -q 'id="join-code"' starlit-cards/three-player/index.html
   deploy:
+    needs: test
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -19,8 +39,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: .
