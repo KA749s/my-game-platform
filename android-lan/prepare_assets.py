@@ -39,5 +39,6 @@ html = html.replace('联机隐私与网络说明', '局域网隐私与网络说�
 html = html.replace('class="brand" href="./"', 'class="brand" href="./"')
 html = html.replace('<title>星火牌局 · 1~3人卡牌对战 | 无需登录</title>', '<title>星火牌局 · 局域网 1～3 人对战</title>')
 (assets / 'index.html').write_text(html, encoding="utf-8")
-assert 'app-lan.js' in html and 'peerjs' not in html.lower()
+assert 'app-lan.js' in html, 'offline JS binding failed'
+assert 'cdn.jsdelivr.net/npm/peerjs' not in html, 'PeerJS CDN was not removed'
 print("Android offline LAN assets prepared:", [p.name for p in assets.iterdir()])
