@@ -1,0 +1,54 @@
+name: Build LAN Android preview APK
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'android-lan/**'
+      - 'starlit-cards/three-player/game-core.js'
+      - 'starlit-cards/three-player/style.css'
+      - 'starlit-cards/three-player/index.html'
+      - '.github/workflows/android-lan-build.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify card engine and custom-deck rules
+        run: node --test tests/three-player-core.test.cjs
+      - name: Check LAN game script
+        run: node --check android-lan/app/src/main/assets/lan/app-lan.js
+      - name: Package offline WebView game UI and battle core
+        run: python3 android-lan/prepare_assets.py
+      - name: Assemble standalone debug-signed APK
+        working-directory: android-lan
+        run: gradle --no-daemon --stacktrace assembleDebug
+      - name: Validate APK metadata and signing
+        shell: bash
+        run: |
+          APK=android-lan/app/build/outputs/apk/debug/app-debug.apk
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='com.starlitcards.lanpreview' versionCode='1' versionName='1.1.0-lan'"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
+      - name: Upload installable LAN test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Starlit-Cards-LAN-1-1-0-TEST-APK
+          path: android-lan/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
