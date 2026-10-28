@@ -68,3 +68,11 @@ body.in-battle #global-status{position:absolute;z-index:100;top:42px;left:10px;r
  body.in-battle .fighter-meta{display:none}
  body.in-battle .playing-card{flex-basis:clamp(62px,12vw,97px)}
 }
+
+/* Fit up to 8 cards on one screen: 4 columns x 2 rows rather than sideways scrolling. */
+body.in-battle .hand-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));grid-auto-flow:row;gap:3px;overflow:hidden;align-content:stretch}
+body.in-battle .playing-card{width:100%;height:100%;flex:none;min-height:0;min-width:0;max-height:100%;padding:3px 2px;gap:0;justify-content:space-evenly}
+body.in-battle .card-symbol{font-size:clamp(17px,3.1vh,31px)}
+body.in-battle .card-name{font-size:clamp(9px,1.35vw,12px)}
+body.in-battle .card-description{font-size:clamp(7px,1.05vw,10px);line-height:1.12}
+@media(max-height:580px){body.in-battle .card-description{display:none}body.in-battle .card-symbol{font-size:clamp(16px,3.4vh,26px)}}
