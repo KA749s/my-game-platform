@@ -9,6 +9,7 @@ assets = root / "android-lan" / "app" / "src" / "main" / "assets" / "lan"
 assets.mkdir(parents=True, exist_ok=True)
 for name in ("game-core.js", "style.css"):
     (assets / name).write_bytes((website / name).read_bytes())
+(assets / "style.css").write_text((website / "style.css").read_text(encoding="utf-8") + "\n" + (root / "android-lan" / "battle-mobile.css").read_text(encoding="utf-8"), encoding="utf-8")
 html = (website / "index.html").read_text(encoding="utf-8")
 html = re.sub(r'\s*<script src="https://cdn\.jsdelivr\.net/npm/peerjs[^"]+" defer></script>', "", html)
 assert 'cdn.jsdelivr.net/npm/peerjs' not in html
