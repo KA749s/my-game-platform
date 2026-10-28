@@ -1,0 +1,18 @@
+plugins {
+    id 'com.android.application'
+}
+android {
+    namespace 'com.starlitcards.lanpreview'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'com.starlitcards.lanpreview'
+        minSdk 24
+        targetSdk 35
+        versionCode 1
+        versionName '1.1.0-lan'
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
