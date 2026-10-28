@@ -4,12 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0a0d1e">
-  <meta name="description" content="《星火牌局》网页版三人卡牌对战，无需注册登录。创建房间，邀请另外两名玩家，轮流出牌争夺最后胜利。">
-  <title>星火牌局 · 三人联机对战 | 无需登录</title>
-  <link rel="stylesheet" href="./style.css?v=1003">
+  <meta name="description" content="《星火牌局》网页版单人、双人、三人卡牌对战，无需注册登录。创建房间，邀请另外两名玩家，轮流出牌争夺最后胜利。">
+  <title>星火牌局 · 1~3人卡牌对战 | 无需登录</title>
+  <link rel="stylesheet" href="./style.css?v=1100">
   <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js" defer></script>
-  <script src="./game-core.js?v=1003" defer></script>
-  <script src="./app.js?v=1003" defer></script>
+  <script src="./game-core.js?v=1100" defer></script>
+  <script src="./app.js?v=1100" defer></script>
 </head>
 <body>
   <div class="cosmos" aria-hidden="true"><span class="glow glow-a"></span><span class="glow glow-b"></span></div>
@@ -25,8 +25,8 @@
     <main>
       <section id="landing" class="landing">
         <div class="eyebrow"><span class="eyebrow-spark">✧</span> STELLAR PVP · WEB EDITION <span class="eyebrow-spark">✧</span></div>
-        <h1>三颗星辰。<br><em>一位胜者。</em></h1>
-        <p class="hero-sub">一人创建房间，两位好友加入。无需账号、无需安装，打开网页就能进行一场真正的三人回合制卡牌对决。</p>
+        <h1>一人也能玩。<br><em>两人或三人也能战。</em></h1>
+        <p class="hero-sub">单人挑战 AI，双人好友切磋，三人自由混战。自己组 22 张牌，无需账号、无需安装。</p>
         <div class="hero-visual" aria-hidden="true">
           <div class="orbit orbit-outer"></div><div class="orbit orbit-inner"></div>
           <div class="hero-card hero-card-left"><span>⚔️</span><strong>星火斩</strong><small>攻击 · 6</small></div>
@@ -35,10 +35,14 @@
           <div class="floating-star star-one">✧</div><div class="floating-star star-two">✦</div>
         </div>
         <div class="join-box">
-          <div class="join-head"><div><span class="small-caps">BATTLE LOBBY</span><h2>开启一场星火对决</h2></div><span class="player-chip">👥 3 位玩家</span></div>
+          <div class="join-head"><div><span class="small-caps">BATTLE LOBBY</span><h2>开启一场星火对决</h2></div><span class="player-chip">👥 1～3 位玩家</span></div>
+          <div class="mode-picker" role="group" aria-label="选择对战人数"><button type="button" data-mode="1">🤖 单人</button><button type="button" data-mode="2">👥 双人</button><button type="button" data-mode="3" class="selected">⚔ 三人</button></div>
+          <p class="join-note" id="mode-description">邀请两位好友进行三人混战</p>
+          <div class="deck-toolbar"><button type="button" class="btn btn-outline" id="deck-toggle">🃏 自定义卡组</button><small>编辑自己的 22 张手牌，自动保存在本机浏览器</small></div>
+          <div id="deck-editor" class="deck-editor" hidden><div class="deck-heading"><strong>我的牌组</strong><button type="button" id="deck-reset" class="btn btn-outline">恢复默认</button></div><p>22 张卡 · 同名最多 8 张 · 攻击卡至少 6 张</p><div id="deck-cards"></div><p id="deck-summary" aria-live="polite">22 / 22 张</p></div>
           <label for="nickname">你的昵称</label>
           <input id="nickname" maxlength="20" placeholder="例如：星海旅人" autocomplete="nickname" value="星火旅人">
-          <button class="btn btn-primary btn-large" id="create-room" type="button">✦ 创建三人房间 <span>→</span></button>
+          <button class="btn btn-primary btn-large" id="create-room" type="button">✦ 开始游戏 / 创建房间 <span>→</span></button>
           <div class="or"><span>或者加入朋友的房间</span></div>
           <div class="join-inline">
             <label class="sr-only" for="join-code">六位房间号</label>
@@ -56,20 +60,20 @@
       <section id="lobby" class="lobby view-pad" hidden>
         <div class="eyebrow">✦ THE GATHERING ✦</div>
         <h1 class="section-title">等待三位星火旅人</h1>
-        <p class="section-sub">把房间号发给两个朋友，三个人到齐才能正式开战。</p>
+        <p class="section-sub">把房间号发给朋友，人数凑齐才能正式开战。</p>
         <div class="room-board">
           <div class="room-code-block"><small>六位房间号</small><strong id="lobby-code">——</strong><p>分享这个号码给朋友</p></div>
           <div class="room-share-box"><small>邀请链接</small><div class="share-link" id="room-share" tabindex="0">正在准备链接…</div><button class="btn btn-outline" id="copy-invite" type="button">复制邀请链接</button></div>
           <div class="members"><div class="members-header"><h2>对战成员</h2><span id="lobby-count" class="count">1 / 3 位玩家</span></div><div id="lobby-players" class="lobby-players"></div></div>
           <div class="room-actions">
             <p id="lobby-hint">等待玩家加入…</p>
-            <button id="start-match" class="btn btn-primary btn-large" type="button" disabled>三人到齐 · 开始对战 ⚔</button>
+            <button id="start-match" class="btn btn-primary btn-large" type="button" disabled>开始对战 ⚔</button>
             <p id="wait-for-host" class="muted" hidden>等房主点击开始按钮即可。</p>
           </div>
         </div>
       </section>
       <section id="battle" class="battle view-pad" hidden>
-        <div class="battle-heading"><span class="eyebrow">⚔ 三人星火决斗</span><span class="round-chip" id="battle-round">第 1 轮</span></div>
+        <div class="battle-heading"><span class="eyebrow">⚔ 星火卡牌对决</span><span class="round-chip" id="battle-round">第 1 轮</span></div>
         <h1 class="section-title" id="turn-heading">等待战斗开始…</h1>
         <p class="section-sub" id="turn-subtitle">每回合可消耗能量出牌，活到最后获得胜利。</p>
         <div id="player-arena" class="arena" aria-live="polite"></div>
@@ -84,7 +88,7 @@
       </section>
     </main>
     <div id="in-room-controls" hidden class="in-room-controls"><button id="leave-room" type="button">✕ 离开房间</button></div>
-    <footer><span>✦ 星火牌局 · 三人联机网页版 v1.0.0</span><p>无需注册或登录 · WebRTC 点对点连接 · 原版单机与 TapTap 游戏分别保留</p><p class="fineprint">此为独立网页版测试功能，需网络连接和 WebRTC 信令服务。部分移动网络或严格防火墙可能无法互联；房主离开时对局结束。公开分享房间号可能允许陌生人加入。</p><p><a href="./privacy.html" target="_blank" rel="noopener noreferrer">联机隐私与网络说明</a> <span>·</span> <a href="https://github.com/KA749s/my-game-platform" target="_blank" rel="noopener noreferrer">网站项目</a></p></footer>
+    <footer><span>✦ 星火牌局 · 1～3 人自定义卡组版 v1.1.0</span><p>无需注册或登录 · WebRTC 点对点连接 · 原版单机与 TapTap 游戏分别保留</p><p class="fineprint">此为独立网页版测试功能，联机模式需网络连接和 WebRTC 信令服务。部分移动网络或严格防火墙可能无法互联；房主离开时对局结束。公开分享房间号可能允许陌生人加入。</p><p><a href="./privacy.html" target="_blank" rel="noopener noreferrer">联机隐私与网络说明</a> <span>·</span> <a href="https://github.com/KA749s/my-game-platform" target="_blank" rel="noopener noreferrer">网站项目</a></p></footer>
   </div>
 </body>
 </html>
