@@ -44,11 +44,11 @@ jobs:
         run: |
           APK=android-lan/app/build/outputs/apk/debug/app-debug.apk
           test -s "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='com.starlitcards.lanpreview' versionCode='1' versionName='1.1.0-lan'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep "package: name='com.starlitcards.lanpreview' versionCode='2' versionName='1.2.0-lan'"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
       - name: Upload installable LAN test APK
         uses: actions/upload-artifact@v4
         with:
-          name: Starlit-Cards-LAN-1-1-0-TEST-APK
+          name: Starlit-Cards-LAN-1-2-0-TEST-APK
           path: android-lan/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
